@@ -14,6 +14,7 @@ import React, {
 } from "react";
 import { Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Loading from "./loading";
 
 type ListProps = {
   children?: ReactNode;
@@ -103,8 +104,16 @@ const ElasticList = forwardRef<BottomSheet, ListProps>(function List(
             }}
             ItemSeparatorComponent={() => <View style={{ height: 0 }} />}
             ListEmptyComponent={
-              <View className="py-5 items-center">
-                <Text className="text-gray-500">{emptyText}</Text>
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingVertical: 32,
+                  minHeight: 300, // garante altura visível em telas menores
+                }}
+              >
+                <Loading fullscreen={false} dimBackground={false} />
               </View>
             }
           />

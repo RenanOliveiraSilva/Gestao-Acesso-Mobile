@@ -1,24 +1,24 @@
 import axios from "axios"; // Importe o axios para verificar o tipo de erro
-import { Rota } from "../assets/types/linhas";
+import { Ponto } from "../assets/types/linhas";
 import { api, createAuthHeaders } from "../utils/api";
 import { showToastTop } from "../utils/showToast";
 
-export const getUserRoutes = async (): Promise<Rota[] | null> => {
+export const getRouteDatail = async (id: number): Promise<Ponto[] | null> => {
   try {
     const headers = await createAuthHeaders();
-    const response = await api.get("rotas", { headers });
+    const response = await api.get(`rotas/${id}/trajeto`, { headers });
 
     if (response.status === 200) {
-      return response.data as Rota[];
+      return response.data as Ponto[];
     }
 
-    showToastTop("error", "Erro ao buscar as Linhas.");
+    showToastTop("error", "Erro ao buscar as Pontos.");
     return null;
   } catch (error) {
     if (axios.isAxiosError(error)) {
       if (error.response && error.response.status === 403) {
         const detailMessage =
-          error.response.data?.detail || "Autenticação inválida.";
+          error.response.data?.detail || "Falha ao Buscar detalhes da Rota.";
         showToastTop("error", detailMessage);
       } else {
         showToastTop(

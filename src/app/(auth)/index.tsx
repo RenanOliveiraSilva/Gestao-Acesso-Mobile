@@ -64,8 +64,9 @@ export default function SingInPage() {
       <View className="flex-1 space-y-2 pt-12">
         <Text className="font-poppins-semibold text-xl mb-3">Matrícula</Text>
         <TextInput
-          className="bg-white/0 border-2 border-primary rounded-xl p-4 mb-10"
+          className="bg-white/0 border-2 border-primary rounded-xl p-4 mb-10 text-black"
           placeholder="Digite sua matrícula"
+          placeholderTextColor="#999"
           keyboardType="numeric"
           value={matricula}
           onChangeText={setMatricula}
@@ -73,8 +74,9 @@ export default function SingInPage() {
         <Text className="font-poppins-semibold text-xl mb-3">Senha</Text>
         <View className="relative">
           <TextInput
-            className="bg-white/0 border-2 border-primary rounded-xl p-4 mb-10 pr-10"
+            className="bg-white/0 border-2 border-primary rounded-xl p-4 mb-10 pr-10 text-black"
             placeholder="Digite sua senha"
+            placeholderTextColor="#999"
             secureTextEntry={hidePass}
             value={senha}
             onChangeText={setSenha}
@@ -100,6 +102,7 @@ export default function SingInPage() {
 
         <View className="w-full h-fit mt-10 items-center justify-center">
           <Text className="text-lg font-bold mb-1">Problemas com conta?</Text>
+
           <Text className="text-lg font-extrabold text-primary">
             Aperte Aqui
           </Text>

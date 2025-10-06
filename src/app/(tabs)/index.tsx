@@ -7,6 +7,7 @@ import { Rota } from "@/src/assets/types/linhas";
 import { getUserRoutes } from "@/src/services/getRoutes";
 import { showToastTop } from "@/src/utils/showToast";
 import { UserStorage } from "@/src/utils/userStorage";
+import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import ButtonComponent from "../components/button";
 import ElasticList from "../components/elasticList";
@@ -52,7 +53,6 @@ export default function TabsHome() {
     setLoading(true);
     try {
       const response = await getUserRoutes();
-      console.log(response);
       if (response) {
         setRoutes(response);
       }
@@ -63,6 +63,15 @@ export default function TabsHome() {
       setLoading(false);
     }
   }, []);
+
+  const handleNavigateDetail = (id: number, nome: string) => {
+    try {
+      showToastTop("success", "Carregando rota " + nome);
+      router.push(`/linha/${id}`);
+    } catch (err) {
+      showToastTop("error", "Falha ao carregar detalhes da Rota");
+    }
+  };
 
   useEffect(() => {
     handleGetUserData();
@@ -124,14 +133,12 @@ export default function TabsHome() {
         contentClassName="p-6"
         dataList={routes}
         estimatedItemSize={92}
-        emptyText="Nenhuma linha encontrada."
         keyExtractor={(item) => String(item.idRota)}
         renderItem={({ item }) => (
           <RotaCard
             item={item}
             onPress={() => {
-              // ação ao tocar uma rota (ex.: abrir detalhes)
-              showToastTop("info", `Abrindo ${item.nome}...`);
+              handleNavigateDetail(item.idRota, item.nome);
             }}
           />
         )}
