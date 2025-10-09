@@ -3,7 +3,7 @@ import { Ponto } from "../assets/types/linhas";
 import { api, createAuthHeaders } from "../utils/api";
 import { showToastTop } from "../utils/showToast";
 
-export const getRouteDatail = async (id: number): Promise<Ponto[] | null> => {
+export const getRouteDetail = async (id: string): Promise<Ponto[] | null> => {
   try {
     const headers = await createAuthHeaders();
     const response = await api.get(`rotas/${id}/trajeto`, { headers });

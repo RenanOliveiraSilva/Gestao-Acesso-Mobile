@@ -1,5 +1,3 @@
-// src/components/elasticList.tsx
-import { Rota } from "@/src/assets/types/linhas";
 import BottomSheet, {
   BottomSheetFlashList,
   BottomSheetView,
@@ -7,6 +5,7 @@ import BottomSheet, {
 import type { ListRenderItem } from "@shopify/flash-list";
 import React, {
   forwardRef,
+  JSX,
   ReactNode,
   useCallback,
   useMemo,
@@ -16,36 +15,41 @@ import { Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Loading from "./loading";
 
-type ListProps = {
+type ListProps<T> = {
   children?: ReactNode;
   snapPoints?: Array<string | number>;
   initialIndex?: number;
   onChange?(index: number): void;
   enablePanDownToClose?: boolean;
   contentClassName?: string;
-  dataList?: Rota[];
-  // NOVOS:
-  renderItem?: ListRenderItem<Rota>;
-  keyExtractor?: (item: Rota, index: number) => string;
+  dataList?: T[];
+  renderItem?: ListRenderItem<T>;
+  enableOverDrag?: boolean;
+  enableHandlePanningGesture?: boolean;
+  enableContentPanningGesture?: boolean;
+  keyExtractor?: (item: T, index: number) => string;
   estimatedItemSize?: number;
   emptyText?: string;
 };
 
-const ElasticList = forwardRef<BottomSheet, ListProps>(function List(
+function ElasticListInner<T>(
   {
     children,
     snapPoints,
     initialIndex = 0,
     onChange,
-    enablePanDownToClose = true,
-    contentClassName = "flex-1 p-4",
+    enablePanDownToClose = false,
+    contentClassName = "",
     dataList = [],
     renderItem,
+    enableOverDrag = true,
+    enableHandlePanningGesture = true,
+    enableContentPanningGesture = true,
     keyExtractor,
     estimatedItemSize = 80,
     emptyText = "Nenhum item encontrado.",
-  },
-  ref
+  }: ListProps<T>,
+  ref: React.Ref<BottomSheet>
 ) {
   const innerRef = useRef<BottomSheet>(null);
   const sheetRef =
@@ -60,44 +64,43 @@ const ElasticList = forwardRef<BottomSheet, ListProps>(function List(
     [onChange]
   );
 
-  // Renderer padrão (se não passar um custom)
-  const defaultRenderItem: ListRenderItem<Rota> = ({ item }) => (
+  const defaultRenderItem: ListRenderItem<T> = ({ item }) => (
     <View className="bg-white rounded-xl p-4 border border-black/5">
-      <Text className="font-poppins-semibold text-base">{item.nome}</Text>
-      <Text className="text-gray-600">
-        {item.cidadeNome}/{item.cidadeUf} • {item.periodo} • cap.{" "}
-        {item.capacidade}
-      </Text>
-      <Text className="text-gray-600">
-        {item.horaPartida} → {item.horaChegada}{" "}
-        {item.ativo ? "• Ativa" : "• Inativa"}
+      <Text className="text-xs text-gray-700">
+        {typeof item === "object" ? JSON.stringify(item) : String(item)}
       </Text>
     </View>
   );
 
   return (
-    <GestureHandlerRootView className="flex-1">
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheet
         ref={sheetRef}
-        index={initialIndex}
         snapPoints={memoSnapPoints}
-        onChange={handleSheetChanges}
-        enablePanDownToClose={enablePanDownToClose}
-        enableOverDrag={false}
-        enableHandlePanningGesture={false}
-        enableContentPanningGesture={false}
-        backgroundStyle={{ borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
         handleIndicatorStyle={{ backgroundColor: "#ccc" }}
+        detached={true}
+        index={initialIndex}
+        onChange={handleSheetChanges}
+        enableOverDrag={false}
+        enableHandlePanningGesture={true}
+        enableContentPanningGesture={true}
+        activeOffsetY={[-10, 10]} // ignora pequenos toques (libera o mapa)
+        backgroundStyle={{
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+        }}
       >
         <BottomSheetView className={contentClassName}>
           {children}
 
           <BottomSheetFlashList
             data={dataList}
-            keyExtractor={keyExtractor ?? ((item) => String(item.idRota))}
+            keyExtractor={
+              keyExtractor ??
+              ((item: any, idx) => String(item?.idRota ?? item?.id ?? idx))
+            }
             renderItem={renderItem ?? defaultRenderItem}
             estimatedItemSize={estimatedItemSize}
-            // padding interno da lista
             contentContainerStyle={{
               paddingTop: 12,
               paddingBottom: 24,
@@ -110,7 +113,7 @@ const ElasticList = forwardRef<BottomSheet, ListProps>(function List(
                   alignItems: "center",
                   justifyContent: "center",
                   paddingVertical: 32,
-                  minHeight: 300, // garante altura visível em telas menores
+                  minHeight: 300,
                 }}
               >
                 <Loading fullscreen={false} dimBackground={false} />
@@ -121,6 +124,10 @@ const ElasticList = forwardRef<BottomSheet, ListProps>(function List(
       </BottomSheet>
     </GestureHandlerRootView>
   );
-});
+}
+
+const ElasticList = forwardRef(ElasticListInner) as <T>(
+  p: ListProps<T> & { ref?: React.Ref<BottomSheet> }
+) => JSX.Element;
 
 export default ElasticList;

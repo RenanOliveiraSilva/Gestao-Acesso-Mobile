@@ -16,6 +16,7 @@ export interface Ponto {
   ordem: number;
   idPonto: number;
   nomePonto: string;
+  endereco: string;
   latitude: number;
   longitude: number;
 }
