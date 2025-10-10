@@ -7,10 +7,14 @@ import { Rota } from "@/src/assets/types/linhas";
 import { getUserRoutes } from "@/src/services/getRoutes";
 import { showToastTop } from "@/src/utils/showToast";
 import { UserStorage } from "@/src/utils/userStorage";
+
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import ButtonComponent from "../components/button";
-import ElasticList from "../components/elasticList";
+
+import { ElasticModalList } from "../components/elasticList";
 import RotaCard from "../components/rotaCard";
 
 type StoredUser = {
@@ -32,6 +36,12 @@ export default function TabsHome() {
 
   const [loading, setLoading] = useState(false);
   const [routes, setRoutes] = useState<Rota[]>();
+
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+
+  const handlePresentModal = useCallback(() => {
+    bottomSheetModalRef.current?.present();
+  }, []);
 
   const handleGetUserData = useCallback(async () => {
     setLoading(true);
@@ -55,6 +65,7 @@ export default function TabsHome() {
       const response = await getUserRoutes();
       if (response) {
         setRoutes(response);
+        handlePresentModal();
       }
     } catch (err) {
       console.error(err);
@@ -62,7 +73,7 @@ export default function TabsHome() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handlePresentModal]);
 
   const handleNavigateDetail = (id: number, nome: string) => {
     try {
@@ -99,7 +110,6 @@ export default function TabsHome() {
           </ButtonComponent>
         </View>
       </View>
-
       {/* ======= CONTENT ====== */}
       <View className="flex flex-row gap-12 justify-center items-center mt-10 mx-8">
         <View className="bg-cardBg flex items-center justify-center rounded-xl px-2 py-6">
@@ -125,12 +135,10 @@ export default function TabsHome() {
           </View>
         </View>
       </View>
-
       {/* ======= FOOTER (LISTA) ====== */}
-      <ElasticList
-        snapPoints={["92%"]}
-        initialIndex={1}
-        contentClassName="p-6"
+      <ElasticModalList
+        ref={bottomSheetModalRef}
+        snapPoints={["50%", "80%"]} // Ajuste os snap points como desejar
         dataList={routes}
         estimatedItemSize={92}
         keyExtractor={(item) => String(item.idRota)}
@@ -143,8 +151,8 @@ export default function TabsHome() {
           />
         )}
       >
-        <Text className="font-poppins-bold text-xl">Linhas:</Text>
-      </ElasticList>
+        <Text className="font-poppins-bold text-xl p-6 pb-2">Linhas:</Text>
+      </ElasticModalList>
     </View>
   );
 }
