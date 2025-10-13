@@ -4,9 +4,6 @@ import { api } from "../utils/api";
 import { showToastTop } from "../utils/showToast";
 import { UserStorage } from "../utils/userStorage";
 
-// Interface do erro não é mais necessária aqui,
-// o erro do axios já tem o que precisamos.
-
 export const autenticateUser = async (
   matricula: string,
   senha: string

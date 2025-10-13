@@ -13,8 +13,7 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import ButtonComponent from "../components/button";
-
-import { ElasticModalList } from "../components/elasticList";
+import ElasticList from "../components/elasticList";
 import RotaCard from "../components/rotaCard";
 
 type StoredUser = {
@@ -33,61 +32,47 @@ export default function TabsHome() {
     email: null,
     role: null,
   });
-
   const [loading, setLoading] = useState(false);
-  const [routes, setRoutes] = useState<Rota[]>();
+  const [routes, setRoutes] = useState<Rota[]>([]);
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const didInit = useRef(false); // evita rodar 2x no StrictMode
 
-  const handlePresentModal = useCallback(() => {
-    bottomSheetModalRef.current?.present();
-  }, []);
-
-  const handleGetUserData = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await UserStorage.getUserData();
-      if (!data.token) {
+      const [user, rotas] = await Promise.all([
+        UserStorage.getUserData(),
+        getUserRoutes(),
+      ]);
+
+      if (!user?.token) {
         showToastTop("error", "Sessão expirada. Faça login novamente.");
       }
-      setUserData(data);
+      setUserData(user);
+      setRoutes(rotas ?? []);
     } catch (err) {
       console.error(err);
-      showToastTop("error", "Falha ao obter dados do usuário.");
+      showToastTop("error", "Falha ao carregar dados iniciais.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const handleGetRoutes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getUserRoutes();
-      if (response) {
-        setRoutes(response);
-        handlePresentModal();
-      }
-    } catch (err) {
-      console.error(err);
-      showToastTop("error", "Falha ao obter rotas.");
-    } finally {
-      setLoading(false);
-    }
-  }, [handlePresentModal]);
+  useEffect(() => {
+    if (didInit.current) return;
+    didInit.current = true;
+    loadAll();
+  }, [loadAll]);
 
   const handleNavigateDetail = (id: number, nome: string) => {
     try {
       showToastTop("success", "Carregando rota " + nome);
       router.push(`/linha/${id}`);
-    } catch (err) {
+    } catch {
       showToastTop("error", "Falha ao carregar detalhes da Rota");
     }
   };
-
-  useEffect(() => {
-    handleGetUserData();
-    handleGetRoutes();
-  }, [handleGetUserData, handleGetRoutes]);
 
   return (
     <View className="flex-1 bg-background">
@@ -110,6 +95,7 @@ export default function TabsHome() {
           </ButtonComponent>
         </View>
       </View>
+
       {/* ======= CONTENT ====== */}
       <View className="flex flex-row gap-12 justify-center items-center mt-10 mx-8">
         <View className="bg-cardBg flex items-center justify-center rounded-xl px-2 py-6">
@@ -135,24 +121,29 @@ export default function TabsHome() {
           </View>
         </View>
       </View>
+
       {/* ======= FOOTER (LISTA) ====== */}
-      <ElasticModalList
+      <ElasticList
         ref={bottomSheetModalRef}
-        snapPoints={["50%", "80%"]} // Ajuste os snap points como desejar
+        snapPoints={["95%"]}
+        initialIndex={0}
         dataList={routes}
         estimatedItemSize={92}
+        enableHandlePanningGesture={false}
+        enableOverDrag={false}
+        enableContentPanningGesture={false}
+        enablePanDownToClose={false}
         keyExtractor={(item) => String(item.idRota)}
         renderItem={({ item }) => (
           <RotaCard
             item={item}
-            onPress={() => {
-              handleNavigateDetail(item.idRota, item.nome);
-            }}
+            onPress={() => handleNavigateDetail(item.idRota, item.nome)}
           />
         )}
+        headerInsideList={true}
       >
-        <Text className="font-poppins-bold text-xl p-6 pb-2">Linhas:</Text>
-      </ElasticModalList>
+        <Text className="font-poppins-bold text-xl pb-2">Linhas:</Text>
+      </ElasticList>
     </View>
   );
 }

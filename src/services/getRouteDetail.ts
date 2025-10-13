@@ -1,25 +1,31 @@
-import axios from "axios"; // Importe o axios para verificar o tipo de erro
-import { Ponto } from "../assets/types/linhas";
-import { api, createAuthHeaders } from "../utils/api";
+// getRouteDetail.ts
+import axios from "axios";
+import type { Ponto, Rota, RotaInfo } from "../assets/types/linhas";
+import { api } from "../utils/api";
 import { showToastTop } from "../utils/showToast";
 
-export const getRouteDetail = async (id: string): Promise<Ponto[] | null> => {
+type RotaDetalhe = { info: RotaInfo; pontos: Ponto[] };
+
+export const getRouteDetail = async (
+  id: string
+): Promise<RotaDetalhe | null> => {
   try {
-    const headers = await createAuthHeaders();
-    const response = await api.get(`rotas/${id}/trajeto`, { headers });
-
-    if (response.status === 200) {
-      return response.data as Ponto[];
+    const { data, status } = await api.get<Rota>(`rotas/${id}`);
+    if (status !== 200) {
+      showToastTop("error", "Erro ao buscar os pontos da rota.");
+      return null;
     }
-
-    showToastTop("error", "Erro ao buscar as Pontos.");
-    return null;
+    const { pontos, ...info } = data;
+    return { info, pontos };
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      if (error.response && error.response.status === 403) {
-        const detailMessage =
-          error.response.data?.detail || "Falha ao Buscar detalhes da Rota.";
-        showToastTop("error", detailMessage);
+      if (error.response?.status === 403) {
+        const msg =
+          (error.response.data as any)?.detail ||
+          "Falha ao buscar detalhes da rota.";
+        showToastTop("error", msg);
+      } else if (error.response?.status === 404) {
+        showToastTop("error", "Rota não encontrada.");
       } else {
         showToastTop(
           "error",
@@ -27,10 +33,9 @@ export const getRouteDetail = async (id: string): Promise<Ponto[] | null> => {
         );
       }
     } else {
-      showToastTop("error", "Ocorreu um erro desconhecido.");
       console.error(error);
+      showToastTop("error", "Ocorreu um erro desconhecido.");
     }
-
     return null;
   }
 };

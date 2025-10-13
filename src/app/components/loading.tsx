@@ -1,12 +1,18 @@
-import { Image } from "expo-image";
+import { Image, type ImageSource } from "expo-image";
 import React from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+
+// importe estático para fallback (necessário pro bundler)
+const DEFAULT_LOADING = require("../../assets/images/loading-bus.gif");
 
 type LoadingProps = {
   fullscreen?: boolean;
   message?: string;
   size?: number;
   dimBackground?: boolean;
+  /** Aceita require(...) ou { uri: 'https://...' } */
+  imageSource?: ImageSource;
+  showMessage?: boolean;
 };
 
 export function Loading({
@@ -14,6 +20,8 @@ export function Loading({
   message = "Carregando...",
   size = 140,
   dimBackground = true,
+  imageSource = DEFAULT_LOADING, // <- fallback estático
+  showMessage = false,
 }: LoadingProps) {
   return (
     <View
@@ -25,18 +33,18 @@ export function Loading({
     >
       <View style={styles.box}>
         <Image
-          source={require("../../assets/images/loading-bus.gif")}
+          source={imageSource}
           style={{ width: size, height: size }}
           contentFit="contain"
           autoplay
           transition={100}
         />
+        {showMessage && <Text style={styles.text}>{message}</Text>}
       </View>
     </View>
   );
 }
 
-// Versão simplificada inline (se quiser usar dentro de layouts menores)
 export function InlineLoading({
   message = "Carregando...",
 }: {
@@ -51,18 +59,9 @@ export function InlineLoading({
 }
 
 const styles = StyleSheet.create({
-  fullscreen: {
-    position: "absolute",
-    inset: 0,
-    zIndex: 999,
-  },
-  container: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dim: {
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
+  fullscreen: { position: "absolute", inset: 0, zIndex: 999 },
+  container: { alignItems: "center", justifyContent: "center" },
+  dim: { backgroundColor: "rgba(0,0,0,0.35)" },
   box: {
     alignItems: "center",
     justifyContent: "center",
@@ -70,7 +69,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   text: {
-    marginTop: 4,
+    marginTop: 8,
     fontFamily: "Poppins_600SemiBold",
     fontSize: 14,
     color: "#fff",
@@ -78,16 +77,8 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  inline: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  inlineText: {
-    fontFamily: "Poppins_500Medium",
-    fontSize: 13,
-    color: "#222",
-  },
+  inline: { flexDirection: "row", alignItems: "center", gap: 8 },
+  inlineText: { fontFamily: "Poppins_500Medium", fontSize: 13, color: "#222" },
 });
 
 export default Loading;

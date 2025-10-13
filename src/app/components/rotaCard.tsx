@@ -15,6 +15,12 @@ export default function RotaCard({
       return require("../../assets/images/logoSJB.png");
     } else if (item.cidadeNome === "Ipuã") {
       return require("../../assets/images/logoIPUA.png");
+    } else if (item.cidadeNome === "Guará") {
+      return require("../../assets/images/logoGUARA.png");
+    } else if (item.cidadeNome === "Ituverava") {
+      return require("../../assets/images/logoITU.png");
+    } else if (item.cidadeNome === "Orlândia") {
+      return require("../../assets/images/logoORL.png");
     }
     return null;
   };
