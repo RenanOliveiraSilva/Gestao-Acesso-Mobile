@@ -7,7 +7,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Polyline } from "react-native-maps";
 import ButtonComponent from "../../components/button";
 import Loading from "../../components/loading";
 import { ElasticModalList } from "../../components/modalList";
@@ -24,11 +24,15 @@ export default function LinhaPage() {
   const [rotaInfo, setRotaInfo] = useState<RotaInfo | null>(null);
   const [pontos, setPontos] = useState<Ponto[]>([]);
   const [markers, setMarkers] = useState<Markers[]>([]);
+  const [routeCoords, setRouteCoords] = useState<
+    { latitude: number; longitude: number }[]
+  >([]);
   const [sheetShown, setSheetShown] = useState(false);
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const mapRef = useRef<MapView>(null);
 
+  // ---- Gera os markers e ajusta o mapa ----
   const buildMarkers = useCallback((data: Ponto[]) => {
     const mks = data.map((p) => ({
       id: p.idPonto,
@@ -48,6 +52,35 @@ export default function LinhaPage() {
     }
   }, []);
 
+  // ---- Busca rota real pelas ruas usando OSRM ----
+  const fetchOSRMDirections = useCallback(async (points: Ponto[]) => {
+    if (points.length < 2) return;
+
+    try {
+      const coords = points.map((p) => `${p.longitude},${p.latitude}`).join(";");
+      const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data?.routes?.length) {
+        const route = data.routes[0].geometry.coordinates.map(
+          ([lon, lat]: [number, number]) => ({
+            latitude: lat,
+            longitude: lon,
+          })
+        );
+        setRouteCoords(route);
+      } else {
+        showToastTop("error", "Não foi possível traçar a rota.");
+      }
+    } catch (err) {
+      console.error("Erro ao buscar rota OSRM:", err);
+      showToastTop("error", "Falha ao conectar ao servidor de rotas.");
+    }
+  }, []);
+
+  // ---- Busca os dados da rota e pontos ----
   const fetchRouteDetail = useCallback(async () => {
     if (!idRoute) {
       showToastTop("error", "Falha ao obter detalhe da Rota (id ausente).");
@@ -57,25 +90,24 @@ export default function LinhaPage() {
     try {
       const res = await getRouteDetail(idRoute);
       if (!res || (res.pontos?.length ?? 0) === 0) {
-        showToastTop(
-          "error",
-          "Não foi possível localizar os pontos dessa Rota!"
-        );
-        setPontos([]); // estado da lista
+        showToastTop("error", "Não foi possível localizar os pontos dessa Rota!");
+        setPontos([]);
         setMarkers([]);
         setRotaInfo(null);
+        setRouteCoords([]);
         return;
       }
       setRotaInfo(res.info);
       setPontos(res.pontos);
       buildMarkers(res.pontos);
+      fetchOSRMDirections(res.pontos); // 🔥 chama rota real
     } catch (err) {
       console.error(err);
       showToastTop("error", "Falha ao obter detalhe da Rota.");
     } finally {
       setLoading(false);
     }
-  }, [idRoute, buildMarkers]);
+  }, [idRoute, buildMarkers, fetchOSRMDirections]);
 
   useEffect(() => {
     fetchRouteDetail();
@@ -84,7 +116,6 @@ export default function LinhaPage() {
 
   useEffect(() => {
     if (pontos.length > 0 && !sheetShown) {
-      // garante que o ref está montado antes de abrir
       setTimeout(() => {
         bottomSheetModalRef.current?.present();
         setSheetShown(true);
@@ -104,6 +135,18 @@ export default function LinhaPage() {
           longitudeDelta: 0.1,
         }}
       >
+        {/* Desenha a rota real pelas ruas */}
+        {routeCoords.length > 0 && (
+          <Polyline
+            coordinates={routeCoords}
+            strokeColor="#00B140"
+            strokeWidth={5}
+            lineCap="round"
+            lineJoin="round"
+          />
+        )}
+
+        {/* Marca os pontos */}
         {markers.map((m) => (
           <Marker
             key={m.id}
@@ -154,8 +197,8 @@ export default function LinhaPage() {
       {/* LISTA SOBRE O MAPA */}
       <ElasticModalList
         ref={bottomSheetModalRef}
-        snapPoints={["15%", "45%"]}
-        initialIndex={1}
+        snapPoints={["15%", "35%"]}
+        initialIndex={2}
         enablePanDownToClose={false}
         dataList={pontos}
         loading={loading}
@@ -166,9 +209,7 @@ export default function LinhaPage() {
           />
         )}
       >
-        <Text className="font-poppins-bold text-xl mb-2">
-          {rotaInfo ? `Pontos da rota ${rotaInfo.nome}:` : "Pontos:"}
-        </Text>
+        <Text className="font-poppins-bold text-xl mb-2">Pontos da Rota:</Text>
       </ElasticModalList>
     </GestureHandlerRootView>
   );

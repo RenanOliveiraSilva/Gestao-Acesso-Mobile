@@ -67,7 +67,6 @@ export default function TabsHome() {
 
   const handleNavigateDetail = (id: number, nome: string) => {
     try {
-      showToastTop("success", "Carregando rota " + nome);
       router.push(`/linha/${id}`);
     } catch {
       showToastTop("error", "Falha ao carregar detalhes da Rota");
