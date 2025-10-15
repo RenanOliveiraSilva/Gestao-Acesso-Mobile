@@ -32,6 +32,43 @@ export default function LinhaPage() {
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const mapRef = useRef<MapView>(null);
 
+  function decodePolyline(encoded: string) {
+    const points: { latitude: number; longitude: number }[] = [];
+    let index = 0,
+      lat = 0,
+      lng = 0;
+
+    while (index < encoded.length) {
+      let b,
+        shift = 0,
+        result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      points.push({
+        latitude: lat / 1e5,
+        longitude: lng / 1e5,
+      });
+    }
+
+    return points;
+  }
+
   const buildMarkers = useCallback((data: Ponto[]) => {
     const mks = data.map((p) => ({
       id: p.idPonto,
@@ -51,31 +88,45 @@ export default function LinhaPage() {
     }
   }, []);
 
-  const fetchOSRMDirections = useCallback(async (points: Ponto[]) => {
+  const fetchGoogleDirections = useCallback(async (points: Ponto[]) => {
     if (points.length < 2) return;
 
     try {
-      const coords = points
-        .map((p) => `${p.longitude},${p.latitude}`)
-        .join(";");
-      const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+      // Origem e destino
+      const origin = `${points[0].latitude},${points[0].longitude}`;
+      const destination = `${points[points.length - 1].latitude},${points[points.length - 1].longitude}`;
+
+      // Waypoints intermediários (se houver mais de 2 pontos)
+      const waypoints =
+        points.length > 2
+          ? points
+              .slice(1, -1)
+              .map((p) => `${p.latitude},${p.longitude}`)
+              .join("|")
+          : "";
+
+      // URL da Directions API
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}${
+        waypoints ? `&waypoints=${waypoints}` : ""
+      }&key=${process.env.EXPO_PUBLIC_MAPS_API_KEY}&mode=driving`;
 
       const res = await fetch(url);
       const data = await res.json();
 
-      if (data?.routes?.length) {
-        const route = data.routes[0].geometry.coordinates.map(
-          ([lon, lat]: [number, number]) => ({
-            latitude: lat,
-            longitude: lon,
-          })
-        );
-        setRouteCoords(route);
-      } else {
+      if (data.status !== "OK" || !data.routes?.length) {
+        console.error("Google Directions API error:", data);
         showToastTop("error", "Não foi possível traçar a rota.");
+        return;
       }
+
+      // Extrair os pontos do polyline (Google retorna codificado)
+      const encodedPolyline = data.routes[0].overview_polyline.points;
+
+      // Decodificar polyline → coordenadas [ { latitude, longitude } ]
+      const decodedCoords = decodePolyline(encodedPolyline);
+      setRouteCoords(decodedCoords);
     } catch (err) {
-      console.error("Erro ao buscar rota OSRM:", err);
+      console.error("Erro ao buscar rota Google:", err);
       showToastTop("error", "Falha ao conectar ao servidor de rotas.");
     }
   }, []);
@@ -102,14 +153,14 @@ export default function LinhaPage() {
       setRotaInfo(res.info);
       setPontos(res.pontos);
       buildMarkers(res.pontos);
-      fetchOSRMDirections(res.pontos);
+      fetchGoogleDirections(res.pontos);
     } catch (err) {
       console.error(err);
       showToastTop("error", "Falha ao obter detalhe da Rota.");
     } finally {
       setLoading(false);
     }
-  }, [idRoute, buildMarkers, fetchOSRMDirections]);
+  }, [idRoute, buildMarkers, fetchGoogleDirections]);
 
   useEffect(() => {
     fetchRouteDetail();
@@ -130,6 +181,7 @@ export default function LinhaPage() {
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
+        provider="google"
         initialRegion={{
           latitude: -20.584872834699688,
           longitude: -47.865089722008996,

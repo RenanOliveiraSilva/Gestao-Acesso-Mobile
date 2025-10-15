@@ -16,6 +16,11 @@
         "foregroundImage": "./src/assets/images/icon-app.png",
         "backgroundColor": "#ffffff"
       },
+      "config": {
+        "googleMaps": {
+          "apiKey": "${process.env.EXPO_PUBLIC_MAPS_API_KEY}"
+        }
+      },
       "edgeToEdgeEnabled": true,
       "package": "com.renanol.gestaoacessomobile"
     },
