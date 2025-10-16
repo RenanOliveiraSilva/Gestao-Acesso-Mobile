@@ -30,6 +30,15 @@
       "favicon": "./src/assets/images/bus-ico.png"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
+          }
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",

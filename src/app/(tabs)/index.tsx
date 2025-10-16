@@ -1,7 +1,7 @@
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Text, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 
 import { Rota } from "@/src/assets/types/linhas";
 import { getUserRoutes } from "@/src/services/getRoutes";
@@ -15,6 +15,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ButtonComponent from "../components/button";
 import ElasticList from "../components/elasticList";
 import RotaCard from "../components/rotaCard";
+
+import { requestForegroundPermissionsAsync } from "expo-location";
 
 type StoredUser = {
   idColaborador: string | null;
@@ -34,9 +36,47 @@ export default function TabsHome() {
   });
   const [loading, setLoading] = useState(false);
   const [routes, setRoutes] = useState<Rota[]>([]);
+  const [locationAllow, setLocationAllow] = useState(false);
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const didInit = useRef(false); // evita rodar 2x no StrictMode
+  const didInit = useRef(false);
+
+  async function requestLocationPermission() {
+    const { granted } = await requestForegroundPermissionsAsync();
+
+    if (granted) {
+      setLocationAllow(granted);
+    } else {
+      showToastTop(
+        "info",
+        "Para acessar as rotas é necessário permitir a localização!"
+      );
+    }
+  }
+
+  const navigateToLiderPage = (id: number) => {
+    try {
+      if (!locationAllow) {
+        requestLocationPermission();
+      }
+
+      router.replace(`/lider/${id}`);
+    } catch (err) {
+      showToastTop("error", "Falha ao carregar validar colaboradores");
+    }
+  };
+
+  const handleNavigateDetail = (id: number, nome: string) => {
+    try {
+      if (!locationAllow) {
+        requestLocationPermission();
+      }
+
+      router.push(`/linha/${id}`);
+    } catch {
+      showToastTop("error", "Falha ao carregar detalhes da Rota");
+    }
+  };
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -65,13 +105,9 @@ export default function TabsHome() {
     loadAll();
   }, [loadAll]);
 
-  const handleNavigateDetail = (id: number, nome: string) => {
-    try {
-      router.push(`/linha/${id}`);
-    } catch {
-      showToastTop("error", "Falha ao carregar detalhes da Rota");
-    }
-  };
+  useEffect(() => {
+    requestLocationPermission();
+  }, []);
 
   return (
     <View className="flex-1 bg-background">
@@ -97,28 +133,36 @@ export default function TabsHome() {
 
       {/* ======= CONTENT ====== */}
       <View className="flex flex-row gap-12 justify-center items-center mt-10 mx-8">
-        <View className="bg-cardBg flex items-center justify-center rounded-xl px-2 py-6">
-          <MaterialCommunityIcons name="line-scan" size={56} color="#038C4C" />
-          <View className="w-32">
-            <Text className="text-center mt-4 text-md font-poppins-semibold text-black">
-              Validar
-            </Text>
-            <Text className="text-center text-md font-poppins-semibold text-black">
-              Colaboradores
-            </Text>
+        <TouchableOpacity onPress={() => navigateToLiderPage(12)}>
+          <View className="bg-cardBg flex items-center justify-center rounded-xl px-2 py-6">
+            <MaterialCommunityIcons
+              name="line-scan"
+              size={56}
+              color="#038C4C"
+            />
+            <View className="w-32">
+              <Text className="text-center mt-4 text-md font-poppins-semibold text-black">
+                Validar
+              </Text>
+              <Text className="text-center text-md font-poppins-semibold text-black">
+                Colaboradores
+              </Text>
+            </View>
           </View>
-        </View>
-        <View className="bg-cardBg flex items-center justify-center rounded-xl px-2 py-6">
-          <MaterialIcons name="route" size={56} color="#038C4C" />
-          <View className="w-32">
-            <Text className="text-center mt-4 text-md font-poppins-semibold text-black">
-              Acompanhar
-            </Text>
-            <Text className="text-center text-md font-poppins-semibold text-black">
-              Rota
-            </Text>
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <View className="bg-cardBg flex items-center justify-center rounded-xl px-2 py-6">
+            <MaterialIcons name="route" size={56} color="#038C4C" />
+            <View className="w-32">
+              <Text className="text-center mt-4 text-md font-poppins-semibold text-black">
+                Acompanhar
+              </Text>
+              <Text className="text-center text-md font-poppins-semibold text-black">
+                Rota
+              </Text>
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* ======= FOOTER (LISTA) ====== */}
